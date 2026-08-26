@@ -116,15 +116,11 @@ export class SearchOrchestrator {
 
     const variants = query.variants.length > 0 ? query.variants : [query.raw];
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), config.requestTimeout);
+    const settled = await Promise.allSettled(
+        activeSources.map((source) => this.executeSourceVariants(source, query, variants)),
+    );
 
-    try {
-      const settled = await Promise.allSettled(
-        activeSources.map((source) => this.executeSourceVariants(source, query, variants, controller.signal)),
-      );
-
-      const outcomes: SourceOutcome[] = settled.map((r, i) => {
+    const outcomes: SourceOutcome[] = settled.map((r, i) => {
         if (r.status === 'fulfilled') return r.value;
         const source = activeSources[i]!;
         return {
@@ -135,25 +131,22 @@ export class SearchOrchestrator {
         };
       });
 
-      const allRaw = outcomes
+    const allRaw = outcomes
         .filter((o): o is SourceSuccess => o.status === 'success')
         .flatMap((o) => o.results);
 
-      const results = this.normalizeAndDeduplicate(allRaw)
+    const results = this.normalizeAndDeduplicate(allRaw)
         .filter((result) => result.confidence >= query.minConfidence)
         .slice(0, query.maxResults);
-      const failures = outcomes.filter((o): o is SourceFailure => o.status === 'failure');
+    const failures = outcomes.filter((o): o is SourceFailure => o.status === 'failure');
 
-      return {
+    return {
         results,
         outcomes,
         failures,
         totalDurationMs: Date.now() - startTime,
         cached: false,
-      };
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    };
   }
 
   private async executeSource(
@@ -184,15 +177,28 @@ export class SearchOrchestrator {
     source: SearchSource,
     query: SearchQuery,
     variants: string[],
-    signal: AbortSignal,
   ): Promise<SourceOutcome> {
     const start = Date.now();
     const results: RawSearchResult[] = [];
 
     try {
       for (const variant of variants) {
-        await this.requestPacer.wait(source.metadata.rateLimitKey ?? source.metadata.id, signal);
-        results.push(...await source.search({ ...query, raw: variant }, signal));
+        await this.requestPacer.wait(
+          source.metadata.rateLimitKey ?? source.metadata.id,
+          new AbortController().signal,
+        );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.requestTimeout);
+        try {
+          results.push(...await source.search({ ...query, raw: variant }, controller.signal));
+        } catch (err) {
+          if (controller.signal.aborted) {
+            throw new Error(`Request timed out after ${config.requestTimeout}ms`);
+          }
+          throw err;
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
       return {
         status: 'success',

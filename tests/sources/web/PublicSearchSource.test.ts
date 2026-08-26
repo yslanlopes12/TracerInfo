@@ -49,4 +49,44 @@ describe('PublicSearchSource', () => {
     const results = await source.search(buildSearchQuery('yslan', 'person'));
     expect(results[0]?.url).toBe(target);
   });
+
+  it('scores a result from the selected social domain above the default threshold', async () => {
+    const target = 'https://x.com/neymarjr/status/123';
+    const html = `<a href="${target}">Public post</a>`;
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => html });
+
+    const source = new PublicSearchSource({
+      id: 'x',
+      name: 'X (Twitter)',
+      type: 'social',
+      description: 'test',
+      buildUrl: (query) => `https://search.brave.com/search?q=${encodeURIComponent(query)}`,
+      allowedHosts: ['x.com'],
+    });
+
+    const results = await source.search(buildSearchQuery('neymar junior', 'person'));
+    expect(results[0]?.confidence).toBe(0.75);
+  });
+
+  it.each([
+    ['isabella louchard', 'https://www.instagram.com/isabellalouchard/'],
+    ['elias bariani cardoso', 'https://www.instagram.com/elias_bariani_cardoso/'],
+    ['yslan lopes', 'https://www.linkedin.com/in/yslanlopes?_l=pt_BR'],
+  ])('prioritizes an exact profile path for %s', async (name, target) => {
+    const html = `<a href="${target}">${name}</a>`;
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => html });
+    const host = new URL(target).hostname;
+    const source = new PublicSearchSource({
+      id: host.includes('linkedin') ? 'linkedin' : 'instagram',
+      name: host.includes('linkedin') ? 'LinkedIn' : 'Instagram',
+      type: 'social',
+      description: 'test',
+      buildUrl: (query) => `https://search.brave.com/search?q=${encodeURIComponent(query)}`,
+      allowedHosts: [host],
+    });
+
+    const results = await source.search(buildSearchQuery(name, 'person'));
+    expect(results[0]?.url).toBe(target);
+    expect(results[0]?.confidence).toBe(0.95);
+  });
 });

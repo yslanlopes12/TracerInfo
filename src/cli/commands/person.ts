@@ -2,13 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { Command } from 'commander';
 import { SearchOrchestrator } from '../../core/search/SearchOrchestrator.js';
 import { buildSearchQuery } from '../../core/models/SearchQuery.js';
-import { Normalizer } from '../../core/normalization/Normalizer.js';
 import { createProductionSources } from '../../sources/web/sourceRegistry.js';
 import { getDatabase } from '../../storage/database.js';
 import { SearchRepository } from '../../storage/repositories/SearchRepository.js';
 import { PersonRepository } from '../../storage/repositories/PersonRepository.js';
 import { ProgressManager } from '../ui/progress.js';
-import { printHeader, printSection, printResult, printSummary, printWarning, printFailure, printSuccess, printError } from '../ui/terminal.js';
+import { printHeader, printSection, printResult, printSocialResult, printSummary, printWarning, printFailure, printSuccess, printError } from '../ui/terminal.js';
 import { renderSourceSummaryTable } from '../ui/tables.js';
 import type { SourceFailure, SourceSuccess } from '../../sources/Source.js';
 import type { SearchResult } from '../../core/models/SearchResult.js';
@@ -69,8 +68,8 @@ async function handlePersonSearch(
     noCache: options.noCache,
     sourceFilter,
     sourceIds: selectedSourceIds,
-    variants: Normalizer.nameVariants(name, options.alias ?? []),
-    minConfidence: options.extend ? 0.5 : 0.7,
+    variants: [name, ...(options.alias ?? [])],
+    minConfidence: options.extend ? 0.5 : 0.65,
     maxResults: options.extend ? 120 : 20,
     maxResultsPerSource: options.extend ? 120 : 20,
   });
@@ -154,11 +153,27 @@ async function handlePersonSearch(
     }
   }
 
-  // Results
-  if (results.length > 0) {
-    printSection(`Results (${results.length})`);
+  // Social results are presented separately so they are easy to identify.
+  const socialResults = results.filter((result) => result.sourceType === 'social');
+  const otherResults = results.filter((result) => result.sourceType !== 'social');
 
-    results.forEach((result, index) => {
+  if (socialResults.length > 0) {
+    printSection(`SOCIAL NETWORKS (${socialResults.length})`);
+    socialResults.forEach((result, index) => {
+      printSocialResult(
+        index + 1,
+        result.title,
+        result.url,
+        result.source,
+        result.confidence,
+        result.excerpt,
+      );
+    });
+  }
+
+  if (otherResults.length > 0) {
+    printSection(`Other sources (${otherResults.length})`);
+    otherResults.forEach((result, index) => {
       printResult(
         index + 1,
         result.title,
@@ -168,7 +183,9 @@ async function handlePersonSearch(
         result.excerpt,
       );
     });
-  } else {
+  }
+
+  if (results.length === 0) {
     console.log();
     console.log('  No results found for this query.');
   }

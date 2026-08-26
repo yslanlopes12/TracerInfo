@@ -100,7 +100,7 @@ export class PublicSearchSource implements SearchSource {
         sourceType: this.metadata.type,
         collectedAt,
         excerpt: snippet || undefined,
-        confidence: this.confidence(title, snippet, query.raw),
+        confidence: this.confidence(title, snippet, query.raw, url, host),
         entities: [],
       });
     });
@@ -152,12 +152,18 @@ export class PublicSearchSource implements SearchSource {
     );
   }
 
-  private confidence(title: string, snippet: string, rawQuery: string): number {
+  private confidence(title: string, snippet: string, rawQuery: string, url: string, host: string): number {
     const normalizedQuery = Normalizer.name(rawQuery);
+    const compactQuery = normalizedQuery.replace(/[^a-z0-9]/g, '');
     const normalizedTitle = Normalizer.name(title);
     const normalizedSnippet = Normalizer.name(snippet);
+    const normalizedUrl = Normalizer.name(url).replace(/[^a-z0-9]/g, '');
+    if (compactQuery && normalizedUrl.includes(compactQuery)) return 0.95;
     if (normalizedTitle.includes(normalizedQuery)) return 0.8;
     if (normalizedSnippet.includes(normalizedQuery)) return 0.65;
+    if (this.options.allowedHosts?.some((allowed) => host === allowed || host.endsWith(`.${allowed}`))) {
+      return 0.75;
+    }
     return 0.5;
   }
 }

@@ -272,22 +272,24 @@ tracerinfo person "João da Silva" --source social
 
 #### Nome, apelidos e codinomes
 
-Para pesquisas de pessoa, o sistema gera formas normalizadas, nome invertido,
-iniciais e nome compacto. Apelidos ou codinomes devem ser informados quando
-forem conhecidos, pois não é seguro inventar equivalências automaticamente:
+Para pesquisas de pessoa, a consulta principal usa o nome completo informado,
+como uma única expressão. O sistema não divide o nome nem faz uma busca para
+cada letra. Apelidos ou codinomes só entram como consultas adicionais quando
+forem informados explicitamente, pois não é seguro inventar equivalências:
 
 ```bash
 tracerinfo person "João da Silva" --alias "J. Silva" --alias "Nome de guerra"
 ```
 
-As variantes são consultadas sequencialmente por fonte para reduzir respostas
-429 e cada fonte aparece uma única vez no resumo da execução. A chave do cache
+O nome principal é consultado como uma expressão completa. Aliases explícitos
+são consultados sequencialmente por fonte para reduzir respostas 429 e cada fonte
+aparece uma única vez no resumo da execução. A chave do cache
 inclui filtros e aliases, portanto uma pesquisa com outra rede ou variante não
 reutiliza resultados incompatíveis.
 
 #### Limites e confiança
 
-No modo padrão, somente resultados com confiança mínima de 70% são exibidos e
+No modo padrão, somente resultados com confiança mínima de 65% são exibidos e
 o total fica limitado a 20 resultados. A confiança é uma pontuação heurística
 da fonte, não uma confirmação de identidade.
 

@@ -90,6 +90,28 @@ export function printResult(
   }
 }
 
+export function printSocialResult(
+  index: number,
+  title: string,
+  url: string,
+  source: string,
+  confidence: number,
+  excerpt?: string,
+): void {
+  const num = brand.muted(`[${String(index).padStart(2, '0')}]`);
+  const conf = formatConfidence(confidence);
+  const src = brand.bold(brand.primary(`[${source}]`));
+
+  console.log();
+  console.log(`${brand.primary('SOCIAL')} ${num} ${brand.bold(title)} ${src} ${conf}`);
+  console.log(`    ${brand.primary(url)}`);
+
+  if (excerpt) {
+    const truncated = excerpt.length > 120 ? excerpt.slice(0, 120) + '…' : excerpt;
+    console.log(`    ${brand.muted(truncated)}`);
+  }
+}
+
 // ─── Confidence Badges ────────────────────────────────────────────────────────
 
 export function formatConfidence(confidence: number): string {

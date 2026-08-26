@@ -44,7 +44,7 @@ export const SearchQuerySchema = z.object({
   variants: z.array(z.string().min(1)).default([]),
 
   /** Minimum confidence accepted by the orchestrator. */
-  minConfidence: z.number().min(0).max(1).default(0.7),
+  minConfidence: z.number().min(0).max(1).default(0.65),
 
   /** Maximum number of final results returned by the orchestrator. */
   maxResults: z.number().int().positive().default(20),
@@ -77,7 +77,7 @@ export function buildSearchQuery(
   const sourceIds = options?.sourceIds ?? [];
   const variants = options?.variants ?? [];
   const normalized = raw.trim().toLowerCase();
-  const minConfidence = options?.minConfidence ?? 0.7;
+  const minConfidence = options?.minConfidence ?? 0.65;
   const maxResults = options?.maxResults ?? 20;
   const cacheKey = [normalized, options?.sourceFilter?.join(',') ?? '', sourceIds.join(','), variants.join('|'), minConfidence, maxResults].join('::');
 
