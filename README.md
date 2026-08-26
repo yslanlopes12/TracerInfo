@@ -52,6 +52,31 @@ npm run db:migrate
 npm run build
 ```
 
+As migrações SQL da pasta `drizzle/` fazem parte do projeto e devem ser
+versionadas. O banco local `tracerinfo.db`, o arquivo `.env` e `dist/` não são
+compartilhados: em uma máquina nova, o banco é criado pelas migrações e o build
+é recriado localmente.
+
+Antes de enviar o projeto para o Git pela primeira vez:
+
+```bash
+git add drizzle .gitignore package.json package-lock.json src tests README.md
+git commit -m "Include database migrations and project sources"
+```
+
+Em outra máquina:
+
+```bash
+git clone <url-do-repositorio>
+cd TracerInfo
+npm install
+cp .env.example .env # PowerShell: Copy-Item .env.example .env
+npm run db:migrate
+npm run build
+npm link
+tracerinfo --version
+```
+
 Para controlar o intervalo entre requisições ao mesmo provedor, defina
 `REQUEST_INTERVAL_MS` no arquivo `.env`. O padrão é `1500` milissegundos; a
 primeira requisição é imediata e as seguintes da mesma fonte compartilhada são
