@@ -1,0 +1,12 @@
+src/
+tests/
+coverage/
+*.db
+*.db-wal
+*.db-shm
+.env
+.deb-build/
+packaging/
+tsconfig*.json
+vitest.config.ts
+drizzle.config.ts

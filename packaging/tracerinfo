@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec node /usr/lib/tracerinfo/dist/index.js "$@"
